@@ -15,11 +15,32 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller
+          pip install pyinstaller pandas numpy openpyxl xlrd lxml
+          pip install -r requirements.txt 2>nul || echo "No requirements.txt found"
           
-      - name: Generate EXE
-        run: pyinstaller --onefile --windowed app.py
-        
+      - name: Create hook files
+        run: |
+          mkdir -p .pyinstaller-hooks
+          echo "from PyInstaller.utils.hooks import collect_data_files, collect_submodules" > .pyinstaller-hooks/hook-pandas.py
+          echo "datas = collect_data_files('pandas')" >> .pyinstaller-hooks/hook-pandas.py
+          echo "hiddenimports = collect_submodules('pandas')" >> .pyinstaller-hooks/hook-pandas.py
+          
+          echo "from PyInstaller.utils.hooks import collect_submodules" > .pyinstaller-hooks/hook-numpy.py
+          echo "hiddenimports = collect_submodules('numpy')" >> .pyinstaller-hooks/hook-numpy.py
+          
+      - name: Generate EXE (with full dependencies)
+        run: |
+          pyinstaller --onefile --windowed \
+            --hidden-import pandas \
+            --hidden-import numpy \
+            --hidden-import openpyxl \
+            --hidden-import xlrd \
+            --hidden-import lxml \
+            --additional-hooks-dir=.pyinstaller-hooks \
+            --collect-data pandas \
+            --collect-data numpy \
+            app.py
+          
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
